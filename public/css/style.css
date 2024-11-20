@@ -1,0 +1,16 @@
+.dropdown-item,
+.nav-item {
+    cursor: pointer;
+}
+a:link,
+a:visited,
+a:hover,
+a:active {
+    text-decoration: none !important;
+    opacity: 1 !important;
+}
+
+.task-card {
+    background-color: rgb(0, 0, 0, 0.15) !important;
+    box-shadow: 0px 0px 20px 0px rgba(66, 68, 90, 1);
+}
