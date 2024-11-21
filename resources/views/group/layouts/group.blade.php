@@ -10,5 +10,8 @@
             <button class="btn btn-info" data-toggle="modal" data-target="#inviteModal"
                 data-link="{{ $group->invite_link }}"><i class="fas fa-share-square"></i></button>
         @endif
+        @if(sizeof($group->users()) != 1)
+            <button class="btn btn-success"><i class="fa-solid fa-users"></i> {{ sizeof($group->users()) }}</button>
+        @endif
     </div>
 </div>

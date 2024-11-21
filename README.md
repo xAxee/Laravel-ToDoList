@@ -10,7 +10,27 @@ Aplikacja do zarzadzania lista todo projektów
 -   Prywatna lista zadań
 -   Grupowa lista zadań
 -   Zapraszanie do grupy
+-   Tworzenie linku z zaproszeniem
 -   Zarządzanie członkami grupy
+
+### Więcej
+<details open>
+<summary>Zrzuty ekranu</summary>
+
+Strona Główna
+![Strona główna](/img/1.png)
+
+Lista zadań
+![Strona główna](/img/2.png)
+
+Wykres
+![Strona główna](/img/3.png)
+
+Zarządzanie grupa
+![Strona główna](/img/4.png)
+
+
+</details>
 
 ### Instalacja
 

@@ -4,8 +4,7 @@
     <!-- Title -->
     <div class='text-light mb-5'>
         <h2 class="text-center">
-            <a href="{{ route('group') }}"><button class="btn btn-secondary text-light"><i
-                        class="fas fa-chevron-double-left"></i></button></a>
+            <a href="{{ route('group') }}"><button class="btn btn-secondary text-light"><i class="fa-solid fa-backward"></i></button></a>
             {{ $group->name }}
         </h2>
         <hr style="border: 1px solid #6c757d;">

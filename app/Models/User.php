@@ -25,7 +25,7 @@ class User extends Authenticatable
     // Return list of user's groups
     public function groups()
     {
-        $groups = $this->belongsToMany(Group::class, 'group_user')->get();
+        $groups = $this->belongsToMany(Group::class, 'group_user')->orderBy('created_at')->get();
         if(sizeof($groups) == 0){
             
             $g = new Group();

@@ -3,8 +3,7 @@
 @section('content')
     <div class="text-center text-light">
         <h2>
-            <a href="{{ route('group') }}"><button class="btn btn-secondary text-light"><i
-                        class="fas fa-chevron-double-left"></i></button></a>
+            <a href="{{ route('group') }}"><button class="btn btn-secondary text-light"><i class="fa-solid fa-backward"></i></button></a>
             <span>Ustawienia grupy</span>
         </h2>
         <hr style="border: 1px solid #6c757d;">
