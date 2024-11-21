@@ -34,21 +34,15 @@
                 @auth
                     @if (Route::is('todo') || Route::is('group.list'))
                         <li class="nav-item">
+                            <a class="nav-link" data-toggle="modal" data-target="#createModal">Utwórz grupe</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" data-toggle="modal" data-target="#chartModal">Wykres</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" data-toggle="modal" data-target="#createModal">Dodaj zadanie</a>
                         </li>
-                    @endif
-                    @if (Route::is('home') || Route::is('group.settings'))
-                        <li class="nav-item">
-                            <a href="{{ route('todo') }}"><span class="nav-link text-light">Prywatna lista</span></a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('group') }}"><span class="nav-link text-light">Grupy</span></a>
-                        </li>
-                    @endif
-                    @if (Route::is('group'))
+                    @else
                         <li class="nav-item">
                             <a class="nav-link" data-toggle="modal" data-target="#createModal">Utwórz grupe</a>
                         </li>

@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\HomeController;
+use App\Http\Controllers\GroupController;
 use App\Http\Controllers\TaskController;
 use App\Http\Middleware\AuthMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -20,5 +20,5 @@ use Illuminate\Support\Facades\Auth;
 // Auth routes
 Auth::routes();
 
-Route::get('/home', [HomeController::class, "Index"]);
-Route::get('/', [HomeController::class, "Index"])->name('home');
+Route::get('/home', [GroupController::class, "Index"]);
+Route::get('/', [GroupController::class, "Index"])->name('home');

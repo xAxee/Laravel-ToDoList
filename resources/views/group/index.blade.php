@@ -11,8 +11,6 @@
     @else
         <div class='text-light mb-3'>
             <h2 class="text-center">
-                <a href="{{ route('home') }}"><button class="btn btn-secondary text-light"><i
-                            class="fas fa-chevron-double-left"></i></button></a>
                 Lista grup
             </h2>
             <hr style="border: 1px solid #6c757d;">

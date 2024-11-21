@@ -78,10 +78,11 @@
                     </ul>
                 </div>
                 <!-- Info button -->
+                
                 <button class="btn btn-primary ml-1 rounded" data-toggle="modal" data-target="#infoModal"
                     data-id="{{ $item->id }}" data-title="{{ Str::title($item->title) }}"
                     data-description="{{ Str::title($item->description) }}" data-status="{{ $item->task_status }}"
-                    @if ($group != null) data-who="{{ $item->user()->name }}" data-assign="{{ $item->assigned()->name ?? 'Nikt' }}" @endif>
+                    @if ($group != null) data-who="{{ $item->user()->name }}" data-assign="{{ $item->assigned()->name ?? 'Nikt' }}" data-date="{{ $item->created_at }}" @endif>
                     <i class="fas fa-info"></i>
                 </button>
             </div>

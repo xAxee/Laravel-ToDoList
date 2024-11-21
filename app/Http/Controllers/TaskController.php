@@ -17,13 +17,10 @@ class TaskController extends Controller
         $this->middleware('auth');
     }
 
-
-    // Return list of tasks
+    // Przekierowanie do widoku grup
     public function Index()
     {
-        $user = User::find(Auth::id());
-        $all = $user->privateTasks()->get();
-        return $this->List($all);
+        return redirect()->route('group');
     }
 
     // Return todo list view
@@ -45,6 +42,7 @@ class TaskController extends Controller
             'title' => ['required', 'max:100', 'min:1'],
             'description' => ['required', 'max:1500', 'min:1'],
             'status' => ['required'],
+            'group_id' => ['required'] // Dodany wymóg grupy
         ]);
 
         $todo = new Todo();
@@ -52,17 +50,13 @@ class TaskController extends Controller
         $todo->description = $request->description;
         $todo->task_status = $request->status;
         $todo->user_id = Auth::id();
-
-        if ($request->group_id != '') {
-            $todo->group_id = $request->group_id;
-            $todo->save();
-            if($request->assign != null){
-                return redirect()->route('group.user.assign', ['id' => $request->group_id, 'email' => $request->assign, 'todo_id' => $todo->id]);
-            }
-            return redirect()->route('group.list', $todo->group_id);
-        }
+        $todo->group_id = $request->group_id;
         $todo->save();
-        return redirect()->route('todo');
+        
+        if($request->assign != null){
+            return redirect()->route('group.user.assign', ['id' => $request->group_id, 'email' => $request->assign, 'todo_id' => $todo->id]);
+        }
+        return redirect()->route('group.list', $todo->group_id);
     }
 
     // Edit task
@@ -72,6 +66,7 @@ class TaskController extends Controller
             'title' => ['required', 'max:100', 'min:1'],
             'description' => ['required', 'max:1500', 'min:1'],
             'status' => ['required'],
+            'group_id' => ['required'] // Dodany wymóg grupy
         ]);
 
         $todo = Todo::find($id);
@@ -82,14 +77,10 @@ class TaskController extends Controller
         $todo->title = $request->title;
         $todo->description = $request->description;
         $todo->task_status = $request->status;
-
-        if ($request->group_id != '') {
-            $todo->save();
-            $todo->group_id = $request->group_id;
-            return redirect()->route('group.list', $todo->group_id);
-        }
+        $todo->group_id = $request->group_id;
         $todo->save();
-        return redirect()->route('todo');
+        
+        return redirect()->route('group.list', $todo->group_id);
     }
 
     // Delete task
@@ -100,10 +91,10 @@ class TaskController extends Controller
         if ($todo == null || $user == null) abort(404);
         if (!$todo->hasPerm($user)) abort(403);
 
+        $group_id = $todo->group_id;
         $todo->delete();
 
-        if ($request->group_id != '') return redirect()->route('group.list', $todo->group_id);
-        return redirect()->route('todo');
+        return redirect()->route('group.list', $group_id);
     }
 
     // Edit task status to position up
@@ -118,8 +109,7 @@ class TaskController extends Controller
         $todo->task_status += 1;
         $todo->save();
 
-        if ($request->group_id != '') return redirect()->route('group.list', $todo->group_id);
-        return redirect()->back();
+        return redirect()->route('group.list', $todo->group_id);
     }
 
     // Edit task status to position down
@@ -134,7 +124,6 @@ class TaskController extends Controller
         $todo->task_status -= 1;
         $todo->save();
 
-        if ($request->group_id != '') return redirect()->route('group.list', $todo->group_id);
-        return redirect()->back();
+        return redirect()->route('group.list', $todo->group_id);
     }
 }

@@ -6,6 +6,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Group;
+use Illuminate\Support\Str;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -22,14 +25,21 @@ class User extends Authenticatable
     // Return list of user's groups
     public function groups()
     {
-        return $this->belongsToMany(Group::class, 'group_user')->get();
+        $groups = $this->belongsToMany(Group::class, 'group_user')->get();
+        if(sizeof($groups) == 0){
+            
+            $g = new Group();
+            $g->name = "Prywatna lista";
+            $g->description = "Prywatna lista zadań do zrobienia";
+            $g->owner_id = $this->id;
+            $g->invite_link = Str::random(10);
+            $g->save();
+            $g->addUser($this);
+            $groups = $this->belongsToMany(Group::class, 'group_user')->get();
+        }
+        return $groups;
     }
 
-    // Return list of user's private tass
-    public function privateTasks()
-    {
-        return $this->tasks()->whereNull('group_id');
-    }
     /**
      * The attributes that are mass assignable.
      *
@@ -39,6 +49,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'id'
     ];
 
     /**

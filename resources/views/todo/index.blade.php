@@ -4,15 +4,9 @@
     <!-- Title -->
     <div class='text-light mb-5'>
         <h2 class="text-center">
-            @if ($group == null)
-                <a href="{{ route('home') }}"><button class="btn btn-secondary text-light"><i
-                            class="fas fa-chevron-double-left"></i></button></a>
-                Zadania prywatne
-            @else
-                <a href="{{ route('group') }}"><button class="btn btn-secondary text-light"><i
-                            class="fas fa-chevron-double-left"></i></button></a>
-                Grupa: {{ $group->name }}
-            @endif
+            <a href="{{ route('group') }}"><button class="btn btn-secondary text-light"><i
+                        class="fas fa-chevron-double-left"></i></button></a>
+            {{ $group->name }}
         </h2>
         <hr style="border: 1px solid #6c757d;">
     </div>
@@ -71,9 +65,7 @@
     @include('todo.layouts.modal.edit')
     @include('todo.layouts.modal.info')
     @include('todo.layouts.modal.chart')
-    @if ($group != null)
-        @include('todo.layouts.modal.assign')
-    @endif
+    @include('todo.layouts.modal.assign')
 @endsection
 
 @section('scripts')
@@ -102,33 +94,32 @@
             var value = button.data('id')
             document.getElementById('delete-form').action = "/todo/post/delete/" + value;
         })
-        @if ($group != null)
-            /* Bootstrap assign modal */
 
-            $('#assignModal').on('show.bs.modal', function(event) {
-                var button = $(event.relatedTarget)
-                var value = button.data('id')
-                var asigned = button.data('asigned')
-                document.getElementById('users').innerHTML = ""
-                var usersList = {{ Illuminate\Support\Js::from($group->users()) }};
-                usersList.unshift({
-                    'email': 'Nikt',
-                    'name': 'Nikt'
-                });
-                usersList.forEach((e) => {
-                    var option = document.createElement('option');
-                    if (e.email == asigned) {
-                        option.selected = true;
-                    }
-                    option.value = e.email;
-                    option.innerText = e.name;
-                    document.getElementById('users').appendChild(option);
-                })
-                // group/{id}/post/assign
-                document.getElementById("assign_id").value = value;
-                document.getElementById('assign-form').action = "/group/" + {{ $group->id }} + "/post/assign";
+        /* Bootstrap assign modal */
+
+        $('#assignModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget)
+            var value = button.data('id')
+            var asigned = button.data('asigned')
+            document.getElementById('users').innerHTML = ""
+            var usersList = {{ Illuminate\Support\Js::from($group->users()) }};
+            usersList.unshift({
+                'email': 'Nikt',
+                'name': 'Nikt'
+            });
+            usersList.forEach((e) => {
+                var option = document.createElement('option');
+                if (e.email == asigned) {
+                    option.selected = true;
+                }
+                option.value = e.email;
+                option.innerText = e.name;
+                document.getElementById('users').appendChild(option);
             })
-        @endif
+            document.getElementById("assign_id").value = value;
+            document.getElementById('assign-form').action = "/group/" + {{ $group->id }} + "/post/assign";
+        })
+
         /* Bootstrap create modal */
 
         $('#createModal').on('show.bs.modal', function(event) {
@@ -172,10 +163,11 @@
             var status = button.data('status')
             var who = button.data('who') ? 'Dodał: <b>' + button.data('who') + '</b>' : '';
             var assign = button.data('assign') ? '<br>Przypisano do: <b>' + button.data('assign') + '</b>' : '';
+            var date = button.data('date') ? '<br>Utworzono: <b>' + button.data('date') + '</b>' : '';
             document.getElementById('infoModal-id').innerHTML = id
             document.getElementById('infoModal-title').innerHTML = "Tytul: " + title
             document.getElementById('infoModal-description').innerText = description
-            document.getElementById('infoModal-who').innerHTML = who + ", " + assign;
+            document.getElementById('infoModal-who').innerHTML = who + ", " + assign + ", " + date;
             document.getElementById('infoModal-status').innerHTML = (status == 1) ? "Do zrobienia" : (
                     status == 2) ?
                 "W trakcie" : "Ukonczone";

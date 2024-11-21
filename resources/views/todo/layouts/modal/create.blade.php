@@ -11,7 +11,7 @@
             <div class="modal-body">
                 <form action="{{ route('todo.post.store') }}" method="post" class="needs-validation" novalidate>
                     {{ csrf_field() }}
-                    <input type="hidden" name="group_id" value="{{ $group->id ?? '' }}" />
+                    <input type="hidden" name="group_id" value="{{ $group->id }}" />
                     <div class="form-group row">
                         <label for="title" class="col-4 col-form-label">Tytuł</label>
                         <div class="col-8">
@@ -27,24 +27,21 @@
                             <span id="descriptionHelpBlock" class="form-text text-muted">Szczegółowy opis</span>
                         </div>
                     </div>
-                    @if($group != null)
-                        <div class="form-group row">
-                            <label for="status" class="col-4 col-form-label">Przypisz</label>
-                            <div class="col-8">
-                                <select id="assign" name="assign" class="custom-select" required="required">
-                                    <option>Nikt</option>
-                                    @foreach($group->users() as $user)
-                                        <option value="{{ $user->email }}">{{ $user->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+                    <div class="form-group row">
+                        <label for="status" class="col-4 col-form-label">Przypisz</label>
+                        <div class="col-8">
+                            <select id="assign" name="assign" class="custom-select" required="required">
+                                <option>Nikt</option>
+                                @foreach($group->users() as $user)
+                                    <option value="{{ $user->email }}">{{ $user->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
-                    @endif
+                    </div>
                     <div class="form-group row">
                         <label for="status" class="col-4 col-form-label">Status</label>
                         <div class="col-8">
                             <select id="status" name="status" class="custom-select" required="required">
-
                                 <option value="1">Do zrobienia</option>
                                 <option value="2">W trakcie</option>
                                 <option value="3">Ukończone</option>
