@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/todo/list', [TaskController::class, 'Index'])->name('todo')->middleware([AuthMiddleware::class]);
 
 // Operacje na zadaniach (zawsze w kontekście grupy)
+
 Route::post('/todo/post/store', [TaskController::class, 'Store'])->name('todo.post.store');
 Route::post('/todo/post/edit/{id}', [TaskController::class, 'Edit'])->name('todo.post.edit');
 Route::get('/todo/post/delete/{id}', [TaskController::class, 'Delete'])->name('todo.post.delete');
 Route::get('/todo/post/up/{id}', [TaskController::class, 'Up'])->name('todo.post.up');
 Route::get('/todo/post/down/{id}', [TaskController::class, 'Down'])->name('todo.post.down');
+Route::get('/todo/assign/{id}', [TaskController::class, 'Assign'])->name('todo.assign');

@@ -4,155 +4,199 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\Group;
 use App\Models\Todo;
 use App\Models\UserGroup;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class GroupController extends Controller
 {
-    // Authentication
     public function __construct()
     {
         $this->middleware('auth');
     }
 
-    // Return group's list view
-    public function Index()
+    public function index(): View
     {
-        $user = User::find(Auth::id());
+        $user = Auth::user();
         $groups = $user->groups();
 
         return view('group.index', ['groups' => $groups]);
     }
 
-    // Return list of tasks
-    public function Tasks(int $id)
+    public function tasks(int $id): View
     {
-        $group = Group::find($id);
-        $tasks = $group->tasks();
+        $group = Group::findOrFail($id);
+        $tasks = $group->getAllTasks();
 
-        return (new TaskController)->List($tasks, $group);
+        return (new TaskController)->list($tasks, $group);
     }
 
-    // Return settings view
-    public function Settings(int $id)
+    public function settings(int $id): View
     {
-        $user = User::find(Auth::id());
-        $group = Group::find($id);
+        $group = $this->findAndAuthorizeOwner($id);
 
-        if ($group == null) abort(404);
-        if ($group->owner_id != $user->id) abort(403);
-
-        return view('group.settings', ['group' => $group, 'allUsers' => User::all()]);
-    }
-
-    // Store group
-    public function Store(Request $request)
-    {
-        $request->validate([
-            'title' => ['required', 'max:100', 'min:1'],
-            'description' => ['required', 'max:1500', 'min:1']
+        return view('group.settings', [
+            'group' => $group,
+            'allUsers' => User::select('id', 'email', 'name')->get()
         ]);
-        $user = User::find(Auth::id());
-
-        // Create a new Group
-        $group = new Group();
-        $group->name = $request->title;
-        $group->description = $request->description;
-        $group->owner_id = $user->id;
-        $group->invite_link = Str::random(10);
-        $group->save();
-
-        $group->addUser($user);
-
-        return redirect()->back()->with(['message' => 'Poprawnie dodano grupe']);
     }
 
-    // Delete group
-    public function Delete(int $id)
+    public function store(Request $request): RedirectResponse
     {
-        $group = Group::find($id);
-        $group->delete();
-
-        return redirect()->route('group')->with(['message' => 'Poprawnie usunięto grupe']);
-    }
-
-    // Edit group
-    public function Edit(int $id, Request $request)
-    {
-        $request->validate([
-            'title' => ['required', 'max:100', 'min:1'],
-            'description' => ['required', 'max:1500', 'min:1']
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:100', 'min:1'],
+            'description' => ['required', 'string', 'max:1500', 'min:1']
         ]);
-        $user = User::find(Auth::id());
-        $group = Group::find($id);
 
-        if ($group == null) abort(404);
-        if ($group->owner_id != $user->id) abort(403);
+        try {
+            DB::beginTransaction();
 
-        $group->name = $request->name;
-        $group->description = $request->description;
-        $group->save();
-        return redirect()->back()->with(['message' => 'Poprawnie edytowano grupe']);
-    }
+            $group = Group::create([
+                'name' => $validated['title'],
+                'description' => $validated['description'],
+                'owner_id' => Auth::id(),
+                'invite_link' => Str::random(10)
+            ]);
 
-    // Assign user logic
-    public function Assign(int $id, Request $request)
-    {
-        $todo = Todo::find($request->todo_id);
-        $user = User::where('email', '=', $request->email)->first();
-        if ($user == null) {
-            $todo->assigned_id = null;
-            $todo->save();
-            return redirect()->back();
-        }
-        $todo->assigned_id = $user->id;
-        $todo->save();
-        return redirect()->back();
-    }
+            $group->addUser(Auth::user());
 
-    // Invite logic
-    public function Invite(string $invite)
-    {
-        $group = Group::where('invite_link', $invite)->first();
-        $user = User::find(Auth::id());
-        if ($group == null || $user == null) return redirect()->route('home');
-
-        if ($group->addUser($user)) {
-            return redirect()->route('group')->with(['message' => 'Poprawnie dołączono do grupy']);
-        } else {
-            return redirect()->route('group')->with(['message' => 'Jesteś już w tej grupue', 'alert' => 'info']);
+            DB::commit();
+            return redirect()->back()->with(['message' => 'Poprawnie dodano grupę']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['msg' => 'Wystąpił błąd podczas tworzenia grupy.']);
         }
     }
 
-    // Add user logic
-    public function AddUser(int $id, Request $request)
+    public function delete(int $id): RedirectResponse
     {
-        $group = Group::find($id);
-        $addUser = User::where('email', $request->email)->get()->first();
-        if ($addUser == null || $group == null) {
+        $group = $this->findAndAuthorizeOwner($id);
+
+        try {
+            DB::beginTransaction();
+            $group->delete();
+            DB::commit();
+
+            return redirect()->route('group')->with(['message' => 'Poprawnie usunięto grupę']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['msg' => 'Wystąpił błąd podczas usuwania grupy.']);
+        }
+    }
+
+    public function edit(int $id, Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:100', 'min:1'],
+            'description' => ['required', 'string', 'max:1500', 'min:1']
+        ]);
+
+        $group = $this->findAndAuthorizeOwner($id);
+
+        try {
+            DB::beginTransaction();
+
+            $group->update([
+                'name' => $validated['title'],
+                'description' => $validated['description']
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with(['message' => 'Poprawnie edytowano grupę']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['msg' => 'Wystąpił błąd podczas edycji grupy.']);
+        }
+    }
+
+    public function invite(string $invite): RedirectResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            $group = Group::where('invite_link', $invite)->firstOrFail();
+            $user = Auth::user();
+
+            $result = $group->addUser($user);
+
+            DB::commit();
+
+            if ($result) {
+                return redirect()->route('group')->with(['message' => 'Poprawnie dołączono do grupy']);
+            }
+
+            return redirect()->route('group')->with([
+                'message' => 'Jesteś już w tej grupie',
+                'alert' => 'info'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('home');
+        }
+    }
+
+    public function addUser(int $id, Request $request): RedirectResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            $group = Group::findOrFail($id);
+            $userToAdd = User::where('email', $request->email)->firstOrFail();
+
+            $result = $group->addUser($userToAdd);
+
+            DB::commit();
+
+            if ($result) {
+                return redirect()->back()->with(['message' => 'Poprawnie dodano członka']);
+            }
+
+            return redirect()->back()->with([
+                'message' => 'Ta osoba już jest członkiem',
+                'alert' => 'info'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
             return redirect()->back()->withErrors(['errors' => 'Błąd grupy lub użytkownika']);
         }
+    }
 
-        if ($group->addUser($addUser)) {
-            return redirect()->back()->with(['message' => 'Poprawnie dodano członka']);
-        } else {
-            return redirect()->back()->with(['message' => 'Ta osoba już jest członkiem', 'alert' => 'info']);
+    public function removeUser(int $id, Request $request): RedirectResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            $userGroup = UserGroup::where('user_id', $request->user_id)
+                ->where('group_id', $id)
+                ->firstOrFail();
+
+            $userGroup->delete();
+
+            DB::commit();
+            if($request->leave){
+                return redirect()->back()->with(['message' => 'Poprawnie opuszczono grupe']);
+            }
+            return redirect()->back()->with(['message' => 'Poprawnie usunięto członka']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['errors' => 'Błąd grupy lub użytkownika']);
         }
     }
 
-    // Remove user logic
-    public function RemoveUser(int $id, Request $request)
+    private function findAndAuthorizeOwner(int $id): Group
     {
-        $user_group = UserGroup::where('user_id', $request->user_id)->where('group_id', $id)->first();
-        if ($user_group == null) {
-            return redirect()->back()->withErrors(['errors' => 'Błąd grupy lub użytkownika']);
+        $group = Group::findOrFail($id);
+        
+        if ($group->owner_id !== Auth::id()) {
+            abort(Response::HTTP_FORBIDDEN);
         }
 
-        $user_group->delete();
-
-        return redirect()->back()->with(['message' => 'Poprawnie usunięto członka']);
+        return $group;
     }
 }

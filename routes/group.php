@@ -18,5 +18,4 @@ Route::get('/group/{id}/delete', [GroupController::class, 'Delete'])->name('grou
 
 Route::get('/group/{id}/post/addUser', [GroupController::class, 'AddUser'])->name('group.user.add');
 Route::post('/group/{id}/post/removeUser', [GroupController::class, 'RemoveUser'])->name('group.user.remove');
-Route::get('/group/{id}/post/assign', [GroupController::class, 'Assign'])->name('group.user.assign');
 Route::get('/group/invite/{invite}', [GroupController::class, 'Invite'])->name('group.invite');

@@ -6,42 +6,79 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Collection;
 
 class Group extends Model
 {
     use HasFactory;
+
     protected $table = 'group';
 
-    // Return list of group's members
-    public function users()
+    protected $fillable = [
+        'name',
+        'description',
+        'owner_id',
+        'invite_link'
+    ];
+
+    protected $casts = [
+        'owner_id' => 'integer'
+    ];
+
+    public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'group_user')->get();
+        return $this->belongsToMany(User::class, 'group_user');
     }
 
-    // Return list of group's tasks
-    public function tasks()
+    public function tasks(): HasMany
     {
-        return $this->hasMany(Todo::class)->get();
+        return $this->hasMany(Todo::class);
     }
 
-    // Add user to group's members
-    public function addUser(User $user)
+    public function getAllUsers(): Collection
     {
-        $userGroup = new UserGroup();
-        $userGroup->group_id = $this->id;
-        $userGroup->user_id = $user->id;
-        if (!$userGroup->isRelated()) {
-            $userGroup->save();
-            return true;
-        } else {
+        return $this->users()->get();
+    }
+
+    public function getAllTasks(): Collection
+    {
+        return $this->tasks()->get();
+    }
+
+    public function addUser(User $user): bool
+    {
+        if ($this->users()->where('users.id', $user->id)->exists()) {
             return false;
         }
+
+        $this->users()->attach($user->id);
+        return true;
     }
 
-    // Remove user from group's members
-    public function removeUser(User $user)
+    public function removeUser(User $user): bool
     {
-        $userGroup = UserGroup::where('user_id', $this->user_id)->where('group_id', $this->group_id)->first();
-        $userGroup->delete();
+        if (!$this->users()->where('users.id', $user->id)->exists()) {
+            return false;
+        }
+
+        $this->users()->detach($user->id);
+        return true;
+    }
+
+    public function isOwner(User $user): bool
+    {
+        return $this->owner_id === $user->id;
+    }
+
+    public function isMember(User $user): bool
+    {
+        return $this->users()->where('users.id', $user->id)->exists();
+    }
+
+    public function regenerateInviteLink(): void
+    {
+        $this->update([
+            'invite_link' => \Illuminate\Support\Str::random(10)
+        ]);
     }
 }

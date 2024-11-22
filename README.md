@@ -21,13 +21,16 @@ Strona Główna
 ![Strona główna](/img/1.png)
 
 Lista zadań
-![Strona główna](/img/2.png)
+![Lista zadan](/img/2.png)
 
 Wykres
-![Strona główna](/img/3.png)
+![Wykres](/img/3.png)
 
 Zarządzanie grupa
-![Strona główna](/img/4.png)
+![Zarządzanie grupa](/img/4.png)
+
+Szczegóły zadania
+![Szczegóły zadania](/img/5.png)
 
 
 </details>

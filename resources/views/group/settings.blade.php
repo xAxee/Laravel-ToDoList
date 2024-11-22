@@ -16,17 +16,23 @@
                 <form action="{{ route('group.post.edit', $group->id) }}" method="POST">
                     {{ csrf_field() }}
                     <div class="form-group row">
-                        <label class="col-2 col-form-label" for="name">Nazwa</label>
+                        <label class="col-2 col-form-label" for="title">Nazwa</label>
                         <div class="col-10">
-                            <input id="name" name="name" placeholder="Nazwa" type="text" class="form-control"
-                                value="{{ $group->name }}">
+                            <input id="title" name="title" placeholder="Nazwa" type="text" class="form-control @error('title') is-invalid @enderror"
+                                value="{{ old('title', $group->name) }}">
+                            @error('title')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                     <div class="form-group row">
                         <label for="description" class="col-2 col-form-label">Opis</label>
                         <div class="col-10">
                             <textarea id="description" name="description" style="min-height: 50px;" cols="40" rows="5"
-                                class="form-control">{{ $group->description }}</textarea>
+                                class="form-control @error('description') is-invalid @enderror">{{ old('description', $group->description) }}</textarea>
+                            @error('description')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                     <div class="form-group row">
@@ -42,7 +48,7 @@
             <div class="card-body">
                 <h5 class="card-title">Usuwanie grupy</h5>
                 <button class="btn btn-danger" type="submit" data-toggle="modal" data-target="#deleteModal">Usuń
-                    grupe</button>
+                    grupę</button>
             </div>
         </div>
         <!-- Add user -->
@@ -52,8 +58,11 @@
                 <form action="{{ route('group.user.add', $group->id) }}" class="form-inline">
                     <div class="form-group mx-sm-3 mb-2">
                         <div class="autocomplete text-dark">
-                            <input id="myInput" class="form-control" type="text" name="email" placeholder="Email"
-                                data-list="#myList" autocomplete="off">
+                            <input id="myInput" class="form-control @error('email') is-invalid @enderror" type="text" 
+                                name="email" placeholder="Email" data-list="#myList" autocomplete="off" value="{{ old('email') }}">
+                            @error('email')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                             <datalist id="myList">
                                 @foreach ($allUsers as $user)
                                     <option value="{{ $user->email }}"></option>
@@ -80,14 +89,14 @@
                     </thead>
                     <tbody>
                         @php $lp = 1; @endphp
-                        @foreach ($group->users() as $user)
+                        @foreach ($group->getAllUsers() as $user)
                             <tr>
                                 <th>{{ $lp }}</th>
                                 <td>{{ $user->name }}</td>
                                 <td>{{ $user->email }}</td>
                                 <td>
-                                    @if ($group->owner_id == $user->id)
-                                        <button class="btn btn-warning disabled">Wlasciciel</button>
+                                    @if ($group->isOwner($user))
+                                        <button class="btn btn-warning disabled">Właściciel</button>
                                     @else
                                         <div class="btn-group">
                                             <form action="{{ route('group.user.remove', $group->id) }}" method="POST">
@@ -135,7 +144,6 @@
             font: 16px Arial;
         }
 
-        /*the container must be positioned relative:*/
         .autocomplete {
             position: relative;
             display: inline-block;
@@ -165,7 +173,6 @@
             border-bottom: none;
             border-top: none;
             z-index: 99;
-            /*position the autocomplete items to be the same width as the container:*/
             top: 100%;
             left: 0;
             right: 0;
@@ -178,12 +185,10 @@
             border-bottom: 1px solid #d4d4d4;
         }
 
-        /*when hovering an item:*/
         .autocomplete-items div:hover {
             background-color: #e9e9e9;
         }
 
-        /*when navigating through the items using the arrow keys:*/
         .autocomplete-active {
             background-color: DodgerBlue !important;
             color: #ffffff;

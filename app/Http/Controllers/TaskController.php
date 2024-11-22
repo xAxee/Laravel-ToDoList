@@ -2,128 +2,173 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Todo;
 use App\Models\User;
-use App\Models\Group;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class TaskController extends Controller
 {
     public function __construct()
     {
-        // Authentication
         $this->middleware('auth');
     }
 
-    // Przekierowanie do widoku grup
-    public function Index()
+    public function index(): RedirectResponse
     {
         return redirect()->route('group');
     }
 
-    // Return todo list view
-    public function List($tasks, $group = null)
+    public function list($tasks, $group = null): View
     {
-        return View("todo.index", [
+        return view("todo.index", [
             'group' => $group,
             'count' => $tasks->count(),
-            'first' => $tasks->where("task_status", "=", 1),
-            'second' => $tasks->where("task_status", "=", 2),
-            'third' => $tasks->where("task_status", "=", 3)
+            'first' => $tasks->where("task_status", "=", Todo::STATUS_TODO),
+            'second' => $tasks->where("task_status", "=", Todo::STATUS_IN_PROGRESS),
+            'third' => $tasks->where("task_status", "=", Todo::STATUS_DONE)
         ]);
     }
 
-    // Store new task
-    public function Store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            'title' => ['required', 'max:100', 'min:1'],
-            'description' => ['required', 'max:1500', 'min:1'],
-            'status' => ['required'],
-            'group_id' => ['required'] // Dodany wymóg grupy
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:100', 'min:1'],
+            'description' => ['required', 'string', 'max:1500', 'min:1'],
+            'status' => ['required', 'integer', 'in:' . implode(',', array_keys(Todo::getAvailableStatuses()))],
+            'group_id' => ['required', 'integer', 'exists:group,id']
         ]);
 
-        $todo = new Todo();
-        $todo->title = $request->title;
-        $todo->description = $request->description;
-        $todo->task_status = $request->status;
-        $todo->user_id = Auth::id();
-        $todo->group_id = $request->group_id;
-        $todo->save();
-        
-        if($request->assign != null){
-            return redirect()->route('group.user.assign', ['id' => $request->group_id, 'email' => $request->assign, 'todo_id' => $todo->id]);
+        try {
+            DB::beginTransaction();
+
+            $todo = Todo::create([
+                ...$validated,
+                'user_id' => Auth::id(),
+                'task_status' => $request->status
+            ]);
+
+            if ($request->filled('assign')) {
+                DB::commit();
+                return redirect()->route('group.user.assign', [
+                    'id' => $request->group_id,
+                    'email' => $request->assign,
+                    'todo_id' => $todo->id
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('group.list', $todo->group_id);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['msg' => 'Wystąpił błąd podczas zapisywania zadania.']);
         }
-        return redirect()->route('group.list', $todo->group_id);
     }
 
-    // Edit task
-    public function Edit(int $id, Request $request)
+    public function edit(int $id, Request $request): RedirectResponse
     {
-        $request->validate([
-            'title' => ['required', 'max:100', 'min:1'],
-            'description' => ['required', 'max:1500', 'min:1'],
-            'status' => ['required'],
-            'group_id' => ['required'] // Dodany wymóg grupy
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:100', 'min:1'],
+            'description' => ['required', 'string', 'max:1500', 'min:1'],
+            'status' => ['required', 'integer', 'in:' . implode(',', array_keys(Todo::getAvailableStatuses()))],
+            'group_id' => ['required', 'integer', 'exists:group,id']
         ]);
 
-        $todo = Todo::find($id);
-        $user = User::find(Auth::id());
-        if ($todo == null || $user == null) abort(404);
-        if (!$todo->hasPerm($user)) abort(403);
+        $todo = $this->findAndAuthorize($id);
 
-        $todo->title = $request->title;
-        $todo->description = $request->description;
-        $todo->task_status = $request->status;
-        $todo->group_id = $request->group_id;
-        $todo->save();
-        
+        try {
+            DB::beginTransaction();
+
+            $todo->update([
+                ...$validated,
+                'task_status' => $request->status
+            ]);
+
+            DB::commit();
+            return redirect()->route('todo.assign', [
+                'id' => $request->group_id,
+                'email' => $request->assign ?? "",
+                'todo_id' => $todo->id
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['msg' => 'Wystąpił błąd podczas aktualizacji zadania.']);
+        }
+    }
+
+    public function delete(int $id): RedirectResponse
+    {
+        $todo = $this->findAndAuthorize($id);
+        $groupId = $todo->group_id;
+
+        try {
+            DB::beginTransaction();
+            $todo->delete();
+            DB::commit();
+
+            return redirect()->route('group.list', $groupId);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['msg' => 'Wystąpił błąd podczas usuwania zadania.']);
+        }
+    }
+
+    public function up(int $id): RedirectResponse
+    {
+        $todo = $this->findAndAuthorize($id);
+
+        if ($todo->task_status === Todo::STATUS_DONE) {
+            return redirect()->back();
+        }
+
+        $todo->update(['task_status' => $todo->task_status + 1]);
         return redirect()->route('group.list', $todo->group_id);
     }
 
-    // Delete task
-    public function Delete(int $id, Request $request)
+    public function down(int $id): RedirectResponse
     {
-        $todo = Todo::find($id);
-        $user = User::find(Auth::id());
-        if ($todo == null || $user == null) abort(404);
-        if (!$todo->hasPerm($user)) abort(403);
+        $todo = $this->findAndAuthorize($id);
 
-        $group_id = $todo->group_id;
-        $todo->delete();
+        if ($todo->task_status === Todo::STATUS_TODO) {
+            return redirect()->back();
+        }
 
-        return redirect()->route('group.list', $group_id);
-    }
-
-    // Edit task status to position up
-    public function Up(int $id, Request $request)
-    {
-        $todo = Todo::find($id);
-        $user = User::find(Auth::id());
-        if ($todo == null || $user == null) abort(404);
-        if (!$todo->hasPerm($user)) abort(403);
-
-        if ($todo->task_status == 3) return redirect()->back();
-        $todo->task_status += 1;
-        $todo->save();
-
+        $todo->update(['task_status' => $todo->task_status - 1]);
         return redirect()->route('group.list', $todo->group_id);
     }
 
-    // Edit task status to position down
-    public function Down(int $id, Request $request)
+    private function findAndAuthorize(int $id): Todo
     {
-        $todo = Todo::find($id);
-        $user = User::find(Auth::id());
-        if ($todo == null || $user == null) abort(404);
-        if (!$todo->hasPerm($user)) abort(403);
+        $todo = Todo::findOrFail($id);
+        $user = Auth::user();
 
-        if ($todo->task_status == 1) return redirect()->back();
-        $todo->task_status -= 1;
-        $todo->save();
+        if (!$todo->hasPerm($user)) {
+            abort(Response::HTTP_FORBIDDEN);
+        }
 
-        return redirect()->route('group.list', $todo->group_id);
+        return $todo;
+    }
+
+    public function assign(int $id, Request $request): RedirectResponse
+    {
+        try {
+            DB::beginTransaction();
+
+            $todo = Todo::findOrFail($request->todo_id);
+            $user = $request->email ? User::where('email', $request->email)->first() : null;
+
+            $todo->update(['assigned_id' => $user?->id]);
+
+            DB::commit();
+            return redirect()->back();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['msg' => 'Wystąpił błąd podczas przypisywania zadania.']);
+        }
     }
 }
